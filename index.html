@@ -311,7 +311,35 @@ renderCharts();
 function sortMonths(obj){
 return Object.keys(obj).sort((a,b)=>new Date("1 "+a)-new Date("1 "+b));
 }
+/* KPI FLOTTA */
 
+let f = fleetData;
+
+if(branch !== "ALL")
+f = f.filter(x => normalize(x["Branch Office"]) === branch);
+
+if(month !== "ALL")
+f = f.filter(x => normalize(monthFromDate(x.Mese)) === month);
+
+const fleetByMonth = {};
+
+f.forEach(d => {
+
+const m = monthFromDate(d.Mese);
+
+fleetByMonth[m] = (fleetByMonth[m] || 0) + Number(d.flotta || 0);
+
+});
+
+const fleetValues = Object.values(fleetByMonth);
+
+const fleetAvg = fleetValues.length
+? fleetValues.reduce((a,b)=>a+b,0) / fleetValues.length
+: 0;
+
+kpiFlotta.innerText = fleetValues.length
+? Math.round(fleetAvg)
+: "–";
 function renderCharts(){
 
 const revenue={},bookings={},ancillaries={},fleet={},costs={};
