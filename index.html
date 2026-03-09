@@ -389,30 +389,99 @@ count[m]=(count[m]||0)+1;
 
 revenueChart?.destroy();
 
-revenueChart=new Chart(revenueTrend,{
+const ctx = revenueTrend.getContext("2d");
+
+const gradientRevenue = ctx.createLinearGradient(0,0,0,400);
+gradientRevenue.addColorStop(0,"rgba(59,130,246,0.4)");
+gradientRevenue.addColorStop(1,"rgba(59,130,246,0)");
+
+const gradientBookings = ctx.createLinearGradient(0,0,0,400);
+gradientBookings.addColorStop(0,"rgba(34,197,94,0.4)");
+gradientBookings.addColorStop(1,"rgba(34,197,94,0)");
+
+revenueChart?.destroy();
+
+revenueChart=new Chart(ctx,{
 type:"line",
+
 data:{
 labels:Object.keys(rev),
+
 datasets:[
+
 {
 label:"Revenue (€)",
 data:Object.values(rev),
 borderColor:"#3b82f6",
-backgroundColor:"rgba(59,130,246,0.2)",
+backgroundColor:gradientRevenue,
 fill:true,
-tension:.4
+tension:.4,
+pointRadius:4,
+pointHoverRadius:6,
+borderWidth:3
 },
+
 {
 label:"Prenotazioni",
 data:Object.values(count),
 borderColor:"#22c55e",
-backgroundColor:"rgba(34,197,94,0.2)",
+backgroundColor:gradientBookings,
 fill:true,
-tension:.4
+tension:.4,
+pointRadius:4,
+pointHoverRadius:6,
+borderWidth:3
 }
+
 ]
 },
-options:{responsive:true,maintainAspectRatio:false}
+
+options:{
+
+responsive:true,
+maintainAspectRatio:false,
+
+interaction:{
+mode:"index",
+intersect:false
+},
+
+plugins:{
+
+legend:{
+labels:{
+color:"#e5e7eb",
+font:{size:14}
+}
+},
+
+tooltip:{
+backgroundColor:"#020617",
+titleColor:"#fff",
+bodyColor:"#e5e7eb",
+borderColor:"#1f2937",
+borderWidth:1,
+padding:12
+}
+
+},
+
+scales:{
+
+x:{
+grid:{display:false},
+ticks:{color:"#9ca3af"}
+},
+
+y:{
+grid:{color:"rgba(255,255,255,0.05)"},
+ticks:{color:"#9ca3af"}
+}
+
+}
+
+}
+
 });
 
 /* altri grafici restano uguali */
