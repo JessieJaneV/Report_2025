@@ -141,7 +141,12 @@ canvas{
 width:100% !important;
 height:100% !important;
 }
-
+.chart-title{
+font-size:16px;
+font-weight:600;
+margin-bottom:12px;
+color:#9ca3af;
+}
 /* FULLSCREEN */
 
 body.fullscreen .chart-box{
@@ -189,26 +194,32 @@ height:75vh;
 <div class="charts">
 
 <div class="chart-box large">
+<h3 class="chart-title">Revenue e prenotazioni</h3>
 <canvas id="revenueTrend"></canvas>
 </div>
 
 <div class="chart-box">
+<h3 class="chart-title">Flotta media</h3>
 <canvas id="fleetTrend"></canvas>
 </div>
 
 <div class="chart-box">
+<h3 class="chart-title">Rental Days</h3>
 <canvas id="rentalTrend"></canvas>
 </div>
 
 <div class="chart-box">
+<h3 class="chart-title">Revenue per sede</h3>
 <canvas id="revenueByBranch"></canvas>
 </div>
 
 <div class="chart-box">
+<h3 class="chart-title">Mix Revenue / Ancillaries</h3>
 <canvas id="revenueMix"></canvas>
 </div>
 
 <div class="chart-box">
+<h3 class="chart-title">Revenue medio prenotazione</h3>
 <canvas id="avgRevenue"></canvas>
 </div>
 
@@ -369,6 +380,48 @@ renderCharts(branch);
 }
 
 /* GRAFICI */
+const chartOptions = {
+
+responsive:true,
+maintainAspectRatio:false,
+
+interaction:{
+mode:"index",
+intersect:false
+},
+
+plugins:{
+
+legend:{
+labels:{
+color:"#e5e7eb",
+font:{size:13}
+}
+},
+
+tooltip:{
+backgroundColor:"#020617",
+titleColor:"#fff",
+bodyColor:"#e5e7eb",
+borderColor:"#1f2937",
+borderWidth:1,
+padding:12
+}
+
+},
+
+scales:{
+x:{
+grid:{display:false},
+ticks:{color:"#9ca3af"}
+},
+y:{
+grid:{color:"rgba(255,255,255,0.05)"},
+ticks:{color:"#9ca3af"}
+}
+}
+
+};  
 
 function renderCharts(branch){
 
