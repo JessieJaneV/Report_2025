@@ -277,8 +277,15 @@ costs[m]=(costs[m]||0)+Number(b.Costi||0);
 
 fleetData.forEach(f=>{
 
-const m=monthFromDate(f.Mese);
-fleet[m]=(fleet[m]||0)+Number(f.flotta||0);
+const m = monthFromDate(f.Mese);
+
+const fleetValue =
+Number(f.flotta) ||
+Number(f.Flotta) ||
+Number(f.Fleet) ||
+0;
+
+fleet[m] = (fleet[m] || 0) + fleetValue;
 
 });
 
