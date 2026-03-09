@@ -222,6 +222,20 @@ height:75vh;
 <h3 class="chart-title">Revenue medio prenotazione</h3>
 <canvas id="avgRevenue"></canvas>
 </div>
+ <div class="chart-box">
+<h3 class="chart-title">Top Branch per Revenue</h3>
+<canvas id="topBranches"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Revenue vs Flotta</h3>
+<canvas id="fleetRevenue"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Prenotazioni per mese</h3>
+<canvas id="bookingSeason"></canvas>
+</div> 
 
 </div>
 
@@ -239,7 +253,15 @@ const ENILIVE_DECEMBER_EXTRA = 149;
 /* DATA */
 
 let fleetData=[], rentalData=[], bookingData=[];
-let revenueChart, rentalChart, fleetTrendChart;
+let revenueChart,
+fleetTrendChart,
+rentalChart,
+revenueBranchChart,
+revenueMixChart,
+avgRevenueChart,
+topBranchesChart,
+fleetRevenueChart,
+bookingSeasonChart;
 
 /* LOAD */
 
@@ -380,6 +402,7 @@ renderCharts(branch);
 }
 
 /* GRAFICI */
+  
 const chartOptions = {
 
 responsive:true,
@@ -452,7 +475,6 @@ const gradientBookings = ctx.createLinearGradient(0,0,0,400);
 gradientBookings.addColorStop(0,"rgba(34,197,94,0.4)");
 gradientBookings.addColorStop(1,"rgba(34,197,94,0)");
 
-revenueChart?.destroy();
 
 revenueChart=new Chart(ctx,{
 type:"line",
@@ -650,7 +672,102 @@ y:{grid:{color:"rgba(255,255,255,0.05)"}}
 }
 }
 });  
+const branchRevenue={};
 
+bookingData.forEach(b=>{
+
+const br=b["Branch office"];
+
+branchRevenue[br]=(branchRevenue[br]||0)+Number(b.Revenue||0);
+
+});
+
+const sortedBranches=Object.entries(branchRevenue)
+.sort((a,b)=>b[1]-a[1])
+.slice(0,8);
+
+new Chart(topBranches,{
+type:"bar",
+data:{
+labels:sortedBranches.map(x=>x[0]),
+datasets:[{
+label:"Revenue",
+data:sortedBranches.map(x=>x[1]),
+backgroundColor:"#3b82f6",
+borderRadius:10
+}]
+},
+options:chartOptions
+});
+ const bookingsByMonth={};
+
+bookingData.forEach(b=>{
+
+const m=monthFromDate(b["Check-out"]);
+
+bookingsByMonth[m]=(bookingsByMonth[m]||0)+1;
+
+});
+/* ========================= */
+/* FLEET VS REVENUE */
+/* ========================= */
+
+const fleetByBranch={};
+
+fleetData.forEach(d=>{
+
+const br=d["Branch Office"];
+
+fleetByBranch[br]=(fleetByBranch[br]||0)+Number(d.flotta||0);
+
+});
+
+const efficiencyData=[];
+
+Object.keys(branchRevenue).forEach(br=>{
+
+if(fleetByBranch[br]){
+
+efficiencyData.push({
+x:fleetByBranch[br],
+y:branchRevenue[br]
+});
+
+}
+
+});
+
+new Chart(fleetRevenue,{
+type:"scatter",
+data:{
+datasets:[{
+label:"Fleet vs Revenue",
+data:efficiencyData,
+backgroundColor:"#22c55e",
+pointRadius:7
+}]
+},
+options:{
+...chartOptions,
+scales:{
+x:{title:{display:true,text:"Flotta"}},
+y:{title:{display:true,text:"Revenue"}}
+}
+}
+});
+new Chart(bookingSeason,{
+type:"bar",
+data:{
+labels:Object.keys(bookingsByMonth),
+datasets:[{
+label:"Prenotazioni",
+data:Object.values(bookingsByMonth),
+backgroundColor:"#22c55e",
+borderRadius:8
+}]
+},
+options:chartOptions
+}); 
 /* altri grafici restano uguali */
 
 }
