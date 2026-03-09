@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
+
 :root{
   --bg:#0f172a;
   --card:#111827;
@@ -42,6 +43,7 @@ h1{font-size:42px;margin-bottom:24px}
 }
 
 /* FILTRI */
+
 .filters{
   display:flex;
   gap:20px;
@@ -60,6 +62,7 @@ h1{font-size:42px;margin-bottom:24px}
 }
 
 /* RESET FILTRI */
+
 #resetFilters{
   padding:20px 24px;
   font-size:16px;
@@ -76,6 +79,7 @@ h1{font-size:42px;margin-bottom:24px}
 }
 
 /* KPI */
+
 .kpis{
   display:grid;
   grid-template-columns:repeat(6,1fr);
@@ -96,29 +100,31 @@ h1{font-size:42px;margin-bottom:24px}
 .kpi span{font-weight:700}
 
 /* GRAFICI */
+
 .charts{
   display:grid;
-  grid-template-columns:2fr 1fr;
-  grid-template-rows:auto auto;
-  gap:36px;
+  grid-template-columns:2fr 1fr 1fr;
+  grid-auto-rows:420px;
+  gap:30px;
 }
 
 .chart-box{
   background:var(--card);
   border-radius:26px;
   padding:30px;
-  height:460px;
 }
 
-.chart-box.small{height:400px}
-
-canvas{width:100%!important;height:100%!important}
+canvas{
+  width:100%!important;
+  height:100%!important;
+}
 
 .footer{
   margin-top:48px;
   text-align:right;
   color:var(--muted);
 }
+
 </style>
 </head>
 
@@ -128,24 +134,46 @@ canvas{width:100%!important;height:100%!important}
 <button id="fullscreenBtn">⛶ Schermo intero</button>
 
 <div class="filters">
-  <select id="branchFilter"></select>
-  <select id="monthFilter"></select>
-  <button id="resetFilters">Reset filtri</button>
+<select id="branchFilter"></select>
+<select id="monthFilter"></select>
+<button id="resetFilters">Reset filtri</button>
 </div>
 
 <div class="kpis">
-  <div class="kpi primary"><h3>Flotta media</h3><span id="kpiFlotta">–</span></div>
-  <div class="kpi secondary"><h3>Rental Days</h3><span id="kpiRental">–</span></div>
-  <div class="kpi secondary"><h3>Flotta Enilive</h3><span id="kpiEnilive">–</span></div>
-  <div class="kpi secondary"><h3>Prenotazioni</h3><span id="kpiBookings">–</span></div>
-  <div class="kpi primary"><h3>Revenue</h3><span id="kpiRevenue">€ 0</span></div>
-  <div class="kpi primary"><h3>Ancillaries</h3><span id="kpiAncillaries">€ 0</span></div>
+<div class="kpi primary"><h3>Flotta media</h3><span id="kpiFlotta">–</span></div>
+<div class="kpi secondary"><h3>Rental Days</h3><span id="kpiRental">–</span></div>
+<div class="kpi secondary"><h3>Flotta Enilive</h3><span id="kpiEnilive">–</span></div>
+<div class="kpi secondary"><h3>Prenotazioni</h3><span id="kpiBookings">–</span></div>
+<div class="kpi primary"><h3>Revenue</h3><span id="kpiRevenue">€ 0</span></div>
+<div class="kpi primary"><h3>Ancillaries</h3><span id="kpiAncillaries">€ 0</span></div>
 </div>
 
 <div class="charts">
-  <div class="chart-box"><canvas id="revenueTrend"></canvas></div>
-  <div class="chart-box small"><canvas id="fleetTrend"></canvas></div>
-  <div class="chart-box small"><canvas id="rentalTrend"></canvas></div>
+
+<div class="chart-box">
+<canvas id="revenueTrend"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="fleetTrend"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="rentalTrend"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="revenueByBranch"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="revenueMix"></canvas>
+</div>
+
+<div class="chart-box">
+<canvas id="avgRevenue"></canvas>
+</div>
+
 </div>
 
 <div class="footer">Fonte dati: Fleet / Booking</div>
@@ -154,178 +182,354 @@ canvas{width:100%!important;height:100%!important}
 
 <script>
 
-/* ========= UTIL ========= */
+/* UTIL */
 
 const normalize = v => v?.toString().trim().toLowerCase() || "";
 const euro = v => "€ " + Math.round(v).toLocaleString("it-IT");
 const monthFromDate = d => new Date(d).toLocaleString("it-IT",{month:"long"});
 const ENILIVE_DECEMBER_EXTRA = 149;
 
-/* ========= DATA ========= */
+/* DATA */
 
 let fleetData=[], rentalData=[], bookingData=[];
 let revenueChart, rentalChart, fleetTrendChart;
 
-/* ========= LOAD ========= */
+/* LOAD */
 
 Promise.all([
-  fetch("Fleet_station2025.json").then(r=>r.json()),
-  fetch("fleetStation2025.json").then(r=>r.json()),
-  fetch("Clean booking 2.json").then(r=>r.json())
+fetch("Fleet_station2025.json").then(r=>r.json()),
+fetch("fleetStation2025.json").then(r=>r.json()),
+fetch("Clean booking 2.json").then(r=>r.json())
 ]).then(([fleet,rental,booking])=>{
-  fleetData = fleet.Data;
-  rentalData = rental.Sheet1;
-  bookingData = booking.Bookings;
-  initFilters();
-  updateDashboard();
+fleetData = fleet.Data;
+rentalData = rental.Sheet1;
+bookingData = booking.Bookings;
+initFilters();
+updateDashboard();
 });
 
-/* ========= FILTRI ========= */
+/* FILTRI */
 
 function initFilters(){
 
-  const branchMap=new Map();
-  fleetData.forEach(d=>branchMap.set(normalize(d["Branch Office"]),d["Branch Office"]));
+const branchMap=new Map();
 
-  branchFilter.innerHTML =
-    `<option value="ALL">Tutte le sedi</option>` +
-    [...branchMap.entries()].map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+fleetData.forEach(d=>branchMap.set(
+normalize(d["Branch Office"]),
+d["Branch Office"]
+));
 
-  const months=[...new Set(fleetData.map(d=>normalize(monthFromDate(d.Mese))))];
+branchFilter.innerHTML =
+`<option value="ALL">Tutte le sedi</option>` +
+[...branchMap.entries()]
+.map(([k,v])=>`<option value="${k}">${v}</option>`)
+.join("");
 
-  monthFilter.innerHTML =
-    `<option value="ALL">Tutti i mesi</option>` +
-    months.map(m=>`<option value="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join("");
+const months=[...new Set(
+fleetData.map(d=>normalize(monthFromDate(d.Mese)))
+)];
 
-  branchFilter.onchange=updateDashboard;
-  monthFilter.onchange=updateDashboard;
+monthFilter.innerHTML =
+`<option value="ALL">Tutti i mesi</option>` +
+months.map(m=>`
+<option value="${m}">
+${m.charAt(0).toUpperCase()+m.slice(1)}
+</option>`).join("");
+
+branchFilter.onchange=updateDashboard;
+monthFilter.onchange=updateDashboard;
 
 }
 
 /* RESET FILTRI */
 
-resetFilters.onclick = () => {
-  branchFilter.value="ALL";
-  monthFilter.value="ALL";
-  updateDashboard();
+resetFilters.onclick = ()=>{
+branchFilter.value="ALL";
+monthFilter.value="ALL";
+updateDashboard();
 };
 
-/* ========= DASHBOARD ========= */
+/* DASHBOARD */
 
 function updateDashboard(){
 
-  const branch = branchFilter.value;
-  const month  = monthFilter.value;
+const branch = branchFilter.value;
+const month  = monthFilter.value;
 
-  let f=fleetData;
+let f=fleetData;
 
-  if(branch!=="ALL") f=f.filter(d=>normalize(d["Branch Office"])===branch);
-  if(month!=="ALL") f=f.filter(d=>normalize(monthFromDate(d.Mese))===month);
+if(branch!=="ALL")
+f=f.filter(d=>normalize(d["Branch Office"])===branch);
 
-  const byMonth={};
+if(month!=="ALL")
+f=f.filter(d=>normalize(monthFromDate(d.Mese))===month);
 
-  f.forEach(d=>byMonth[d.Mese]=(byMonth[d.Mese]||0)+Number(d.flotta||0));
+const byMonth={};
 
-  Object.keys(byMonth).forEach(m=>{
-    if(normalize(monthFromDate(m))==="dicembre"){
-      byMonth[m]+=ENILIVE_DECEMBER_EXTRA;
-    }
-  });
+f.forEach(d=>
+byMonth[d.Mese]=(byMonth[d.Mese]||0)+Number(d.flotta||0)
+);
 
-  const flottaVals=Object.values(byMonth);
+Object.keys(byMonth).forEach(m=>{
+if(normalize(monthFromDate(m))==="dicembre"){
+byMonth[m]+=ENILIVE_DECEMBER_EXTRA;
+}
+});
 
-  const flottaMedia = flottaVals.length
-    ? flottaVals.reduce((a,b)=>a+b,0)/flottaVals.length
-    : 0;
+const flottaVals=Object.values(byMonth);
 
-  kpiFlotta.innerText = flottaVals.length ? Math.round(flottaMedia) : "–";
+const flottaMedia =
+flottaVals.length
+? flottaVals.reduce((a,b)=>a+b,0)/flottaVals.length
+: 0;
 
-  let r=rentalData;
+kpiFlotta.innerText =
+flottaVals.length ? Math.round(flottaMedia) : "–";
 
-  if(month!=="ALL") r=r.filter(d=>normalize(d.Mese)===month);
+/* RENTAL */
 
-  kpiRental.innerText =
-    r.reduce((s,d)=>s+Number(d["Rental Days"]),0).toLocaleString("it-IT");
+let r=rentalData;
 
-  kpiEnilive.innerText =
-    (branch==="ALL" && month==="dicembre") ? ENILIVE_DECEMBER_EXTRA : "–";
+if(month!=="ALL")
+r=r.filter(d=>normalize(d.Mese)===month);
 
-  let b=bookingData;
+kpiRental.innerText =
+r.reduce((s,d)=>s+Number(d["Rental Days"]),0)
+.toLocaleString("it-IT");
 
-  if(branch!=="ALL") b=b.filter(x=>normalize(x["Branch office"])===branch);
-  if(month!=="ALL") b=b.filter(x=>normalize(monthFromDate(x["Check-out"]))===month);
+/* ENILIVE */
 
-  const bookingsCount=b.length;
-  const revenueTotal=b.reduce((s,x)=>s+Number(x.Revenue||0),0);
-  const ancillariesTotal=b.reduce((s,x)=>s+Number(x["Ancillaries vendute"]||0),0);
+kpiEnilive.innerText =
+(branch==="ALL" && month==="dicembre")
+? ENILIVE_DECEMBER_EXTRA
+: "–";
 
-  kpiBookings.innerText=bookingsCount;
-  kpiRevenue.innerText=euro(revenueTotal);
-  kpiAncillaries.innerText=euro(ancillariesTotal);
+/* BOOKING */
 
-  renderCharts(branch);
+let b=bookingData;
+
+if(branch!=="ALL")
+b=b.filter(x=>normalize(x["Branch office"])===branch);
+
+if(month!=="ALL")
+b=b.filter(x=>normalize(
+monthFromDate(x["Check-out"])
+)===month);
+
+const bookingsCount=b.length;
+
+const revenueTotal=b.reduce(
+(s,x)=>s+Number(x.Revenue||0),0
+);
+
+const ancillariesTotal=b.reduce(
+(s,x)=>s+Number(x["Ancillaries vendute"]||0),0
+);
+
+kpiBookings.innerText=bookingsCount;
+kpiRevenue.innerText=euro(revenueTotal);
+kpiAncillaries.innerText=euro(ancillariesTotal);
+
+renderCharts(branch);
 
 }
 
-/* ========= GRAFICI ========= */
+/* GRAFICI */
 
 function renderCharts(branch){
 
-  const rev={}, count={};
+/* REVENUE TREND */
 
-  bookingData.forEach(b=>{
+const rev={}, count={};
 
-    const m=normalize(monthFromDate(b["Check-out"]));
+bookingData.forEach(b=>{
 
-    if(branch==="ALL" || normalize(b["Branch office"])===branch){
+const m=normalize(monthFromDate(b["Check-out"]));
 
-      rev[m]=(rev[m]||0)+Number(b.Revenue||0);
-      count[m]=(count[m]||0)+1;
+if(branch==="ALL" || normalize(b["Branch office"])===branch){
 
-    }
-
-  });
-
-  revenueChart?.destroy();
-
-  revenueChart=new Chart(revenueTrend,{
-    type:"line",
-    data:{
-      labels:Object.keys(rev),
-      datasets:[
-        {label:"Revenue (€)",data:Object.values(rev),borderColor:"#3b82f6",yAxisID:"y"},
-        {label:"Prenotazioni",data:Object.values(count),borderColor:"#22c55e",yAxisID:"y1"}
-      ]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      scales:{
-        y:{beginAtZero:true},
-        y1:{beginAtZero:true,position:"right",grid:{drawOnChartArea:false}}
-      }
-    }
-  });
+rev[m]=(rev[m]||0)+Number(b.Revenue||0);
+count[m]=(count[m]||0)+1;
 
 }
 
-/* ========= FULLSCREEN ========= */
+});
+
+revenueChart?.destroy();
+
+revenueChart=new Chart(revenueTrend,{
+type:"line",
+data:{
+labels:Object.keys(rev),
+datasets:[
+{
+label:"Revenue (€)",
+data:Object.values(rev),
+borderColor:"#3b82f6",
+backgroundColor:"rgba(59,130,246,0.15)",
+fill:true,
+tension:.4,
+pointRadius:4
+},
+{
+label:"Prenotazioni",
+data:Object.values(count),
+borderColor:"#22c55e",
+backgroundColor:"rgba(34,197,94,0.15)",
+fill:true,
+tension:.4,
+pointRadius:4
+}
+]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+interaction:{mode:"index",intersect:false}
+}
+});
+
+/* FLEET TREND */
+
+const fleetByMonth={};
+
+fleetData.forEach(d=>{
+if(branch==="ALL" || normalize(d["Branch Office"])===branch){
+fleetByMonth[d.Mese]=(fleetByMonth[d.Mese]||0)+Number(d.flotta||0);
+}
+});
+
+Object.keys(fleetByMonth).forEach(m=>{
+if(normalize(monthFromDate(m))==="dicembre"){
+fleetByMonth[m]+=ENILIVE_DECEMBER_EXTRA;
+}
+});
+
+fleetTrendChart?.destroy();
+
+fleetTrendChart=new Chart(fleetTrend,{
+type:"line",
+data:{
+labels:Object.keys(fleetByMonth).map(m=>monthFromDate(m)),
+datasets:[{
+label:"Flotta media",
+data:Object.values(fleetByMonth),
+borderColor:"#22c55e",
+tension:.3
+}]
+}
+});
+
+/* RENTAL DAYS */
+
+rentalChart?.destroy();
+
+rentalChart=new Chart(rentalTrend,{
+type:"bar",
+data:{
+labels:rentalData.map(d=>d.Mese),
+datasets:[{
+label:"Rental Days",
+data:rentalData.map(d=>d["Rental Days"]),
+backgroundColor:"#3b82f6"
+}]
+}
+});
+
+/* REVENUE BY BRANCH */
+
+const revBranch={};
+
+bookingData.forEach(b=>{
+const branch=b["Branch office"];
+revBranch[branch]=(revBranch[branch]||0)+Number(b.Revenue||0);
+});
+
+new Chart(revenueByBranch,{
+type:"bar",
+data:{
+labels:Object.keys(revBranch),
+datasets:[{
+data:Object.values(revBranch),
+backgroundColor:"#3b82f6"
+}]
+},
+options:{plugins:{legend:{display:false}}}
+});
+
+/* REVENUE MIX */
+
+let revenue=0;
+let ancillaries=0;
+
+bookingData.forEach(b=>{
+revenue+=Number(b.Revenue||0);
+ancillaries+=Number(b["Ancillaries vendute"]||0);
+});
+
+new Chart(revenueMix,{
+type:"doughnut",
+data:{
+labels:["Revenue","Ancillaries"],
+datasets:[{
+data:[revenue,ancillaries],
+backgroundColor:["#3b82f6","#22c55e"]
+}]
+}
+});
+
+/* AVG REVENUE */
+
+const avgByMonth={};
+
+bookingData.forEach(b=>{
+
+const m=monthFromDate(b["Check-out"]);
+
+if(!avgByMonth[m]){
+avgByMonth[m]={rev:0,count:0};
+}
+
+avgByMonth[m].rev+=Number(b.Revenue||0);
+avgByMonth[m].count++;
+
+});
+
+new Chart(avgRevenue,{
+type:"line",
+data:{
+labels:Object.keys(avgByMonth),
+datasets:[{
+label:"Revenue medio",
+data:Object.values(avgByMonth)
+.map(v=>v.rev/v.count),
+borderColor:"#f59e0b",
+backgroundColor:"rgba(245,158,11,0.15)",
+fill:true,
+tension:.4
+}]
+}
+});
+
+}
+
+/* FULLSCREEN */
 
 fullscreenBtn.onclick=async()=>{
 
-  if(!document.fullscreenElement){
+if(!document.fullscreenElement){
 
-    await document.documentElement.requestFullscreen();
-    document.body.classList.add("fullscreen");
-    fullscreenBtn.innerText="⤫ Esci da schermo intero";
+await document.documentElement.requestFullscreen();
+document.body.classList.add("fullscreen");
+fullscreenBtn.innerText="⤫ Esci da schermo intero";
 
-  }else{
+}else{
 
-    await document.exitFullscreen();
-    document.body.classList.remove("fullscreen");
-    fullscreenBtn.innerText="⛶ Schermo intero";
+await document.exitFullscreen();
+document.body.classList.remove("fullscreen");
+fullscreenBtn.innerText="⛶ Schermo intero";
 
-  }
+}
 
 };
 
