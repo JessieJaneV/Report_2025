@@ -187,35 +187,41 @@ let fleetData=[], rentalData=[], bookingData=[];
 let mainChart,fleetChart,rentalChart,revenueBranchChart,mixChart,avgChart,topChart,effChart,seasonChart;
 
 Promise.all([
-  fetch("Fleet_station2025.json").then(r=>r.json()),
-  fetch("fleetStation2025.json").then(r=>r.json()),
-  fetch("Clean booking 2.json").then(r=>r.json())
+fetch("Fleet_station2025.json").then(r=>r.json()),
+fetch("fleetStation2025.json").then(r=>r.json()),
+fetch("Clean booking 2.json").then(r=>r.json())
 ]).then(([fleet,rental,booking])=>{
 
-  fleetData =
-    fleet.Data ||
-    fleet.Sheet1 ||
-    fleet;
+// FLEET
+fleetData =
+fleet.Data ||
+fleet.Sheet1 ||
+fleet.data ||
+fleet;
 
-  rentalData =
-    rental.Data ||
-    rental.Sheet1 ||
-    rental;
+// RENTAL
+rentalData =
+rental.Sheet1 ||
+rental.Data ||
+rental.data ||
+rental;
 
-  bookingData =
-    booking.Bookings ||
-    booking.Data ||
-    booking;
+// BOOKING
+bookingData =
+booking.Bookings ||
+booking.Data ||
+booking.data ||
+booking;
 
-  console.log("Fleet rows:", fleetData.length);
-  console.log("Rental rows:", rentalData.length);
-  console.log("Booking rows:", bookingData.length);
+// DEBUG
+console.log("Fleet loaded:", fleetData);
+console.log("Rental loaded:", rentalData);
+console.log("Booking loaded:", bookingData);
 
-  initFilters();
-  updateDashboard();
+initFilters();
+updateDashboard();
 
 });
-
 function initFilters(){
 
 const branchMap=new Map();
