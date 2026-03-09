@@ -301,7 +301,9 @@ costs[m]=(costs[m]||0)+Number(b.Costi||0);
 
 fleetData.forEach(f=>{
 
-const m = monthFromDate(f.Mese || f["Mese"]);
+const m = normalize(
+  new Date(f.Mese || f["Mese"]).toLocaleString("it-IT",{month:"long"})
+);
 
 const value =
 Number(f.flotta) ||
@@ -309,12 +311,9 @@ Number(f.Flotta) ||
 Number(f["Fleet"]) ||
 0;
 
-if(!fleet[m]) fleet[m] = 0;
-
-fleet[m] += value;
+fleet[m] = (fleet[m] || 0) + value;
 
 });
-
 const months=sortMonths(revenue);
 
 mainChart?.destroy();
@@ -391,7 +390,7 @@ totalAnc+=Number(b["Ancillaries vendute"]||0);
 
 mixChart?.destroy();
 
-mixChart=new Chart(mixChart,{
+mixChart = new Chart(document.getElementById("mixChart"),{
 type:"doughnut",
 data:{
 labels:["Revenue","Ancillaries"],
