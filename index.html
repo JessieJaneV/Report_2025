@@ -483,6 +483,120 @@ ticks:{color:"#9ca3af"}
 }
 
 });
+/* ========================= */
+/* REVENUE PER SEDE */
+/* ========================= */
+
+const revBranch = {};
+
+bookingData.forEach(b=>{
+const br = b["Branch office"];
+
+if(branch==="ALL" || normalize(br)===branch){
+revBranch[br]=(revBranch[br]||0)+Number(b.Revenue||0);
+}
+});
+
+new Chart(revenueByBranch,{
+type:"bar",
+data:{
+labels:Object.keys(revBranch),
+datasets:[{
+label:"Revenue per sede",
+data:Object.values(revBranch),
+backgroundColor:"#3b82f6",
+borderRadius:8
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{display:false}},
+scales:{
+x:{grid:{display:false}},
+y:{grid:{color:"rgba(255,255,255,0.05)"}}
+}
+}
+});
+
+
+/* ========================= */
+/* MIX REVENUE / ANCILLARIES */
+/* ========================= */
+
+let revenue=0;
+let ancillaries=0;
+
+bookingData.forEach(b=>{
+if(branch==="ALL" || normalize(b["Branch office"])===branch){
+revenue+=Number(b.Revenue||0);
+ancillaries+=Number(b["Ancillaries vendute"]||0);
+}
+});
+
+new Chart(revenueMix,{
+type:"doughnut",
+data:{
+labels:["Revenue","Ancillaries"],
+datasets:[{
+data:[revenue,ancillaries],
+backgroundColor:["#3b82f6","#22c55e"]
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+legend:{position:"bottom"}
+}
+}
+});
+
+
+/* ========================= */
+/* REVENUE MEDIO PER BOOKING */
+/* ========================= */
+
+const avgByMonth={};
+
+bookingData.forEach(b=>{
+
+const m = monthFromDate(b["Check-out"]);
+
+if(!avgByMonth[m]){
+avgByMonth[m]={rev:0,count:0};
+}
+
+avgByMonth[m].rev+=Number(b.Revenue||0);
+avgByMonth[m].count++;
+
+});
+
+const avgValues = Object.values(avgByMonth)
+.map(v=>v.rev/v.count);
+
+new Chart(avgRevenue,{
+type:"line",
+data:{
+labels:Object.keys(avgByMonth),
+datasets:[{
+label:"Revenue medio prenotazione",
+data:avgValues,
+borderColor:"#f59e0b",
+backgroundColor:"rgba(245,158,11,0.2)",
+fill:true,
+tension:.4
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+scales:{
+x:{grid:{display:false}},
+y:{grid:{color:"rgba(255,255,255,0.05)"}}
+}
+}
+});  
 
 /* altri grafici restano uguali */
 
