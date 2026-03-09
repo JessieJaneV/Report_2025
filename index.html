@@ -191,7 +191,7 @@ fetch("Fleet_station2025.json").then(r=>r.json()),
 fetch("fleetStation2025.json").then(r=>r.json()),
 fetch("Clean booking 2.json").then(r=>r.json())
 ]).then(([fleet,rental,booking])=>{
-fleetData = fleet.Data;
+fleetData = fleet.Sheet1;
 rentalData = rental.Sheet1;
 bookingData = booking.Bookings;
 initFilters();
@@ -277,15 +277,17 @@ costs[m]=(costs[m]||0)+Number(b.Costi||0);
 
 fleetData.forEach(f=>{
 
-const m = monthFromDate(f.Mese);
+const m = monthFromDate(f.Mese || f["Mese"]);
 
-const fleetValue =
+const value =
 Number(f.flotta) ||
 Number(f.Flotta) ||
-Number(f.Fleet) ||
+Number(f["Fleet"]) ||
 0;
 
-fleet[m] = (fleet[m] || 0) + fleetValue;
+if(!fleet[m]) fleet[m] = 0;
+
+fleet[m] += value;
 
 });
 
@@ -365,7 +367,7 @@ totalAnc+=Number(b["Ancillaries vendute"]||0);
 
 mixChart?.destroy();
 
-mixChart=new Chart(mixChartId??mixChart,{
+mixChart=new Chart(mixChart,{
 type:"doughnut",
 data:{
 labels:["Revenue","Ancillaries"],
