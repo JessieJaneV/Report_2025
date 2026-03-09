@@ -301,14 +301,23 @@ costs[m]=(costs[m]||0)+Number(b.Costi||0);
 
 fleetData.forEach(f=>{
 
-const m = normalize(
-  new Date(f.Mese || f["Mese"]).toLocaleString("it-IT",{month:"long"})
-);
+let rawMonth = f.Mese || f["Mese"];
 
+/* se è una data la converto */
+let m;
+
+if(!isNaN(Date.parse(rawMonth))){
+  m = monthFromDate(rawMonth);
+}else{
+  m = rawMonth.toLowerCase();
+}
+
+/* valore flotta */
 const value =
 Number(f.flotta) ||
 Number(f.Flotta) ||
 Number(f["Fleet"]) ||
+Number(f["flotta media"]) ||
 0;
 
 fleet[m] = (fleet[m] || 0) + value;
