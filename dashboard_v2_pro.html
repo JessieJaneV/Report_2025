@@ -1,0 +1,387 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Fleet & Revenue Dashboard V2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+--bg:#0f172a;
+--sidebar:#020617;
+--card:#111827;
+--text:#e5e7eb;
+--muted:#9ca3af;
+--accent:#3b82f6;
+}
+
+body{
+margin:0;
+font-family:Inter,system-ui,sans-serif;
+background:var(--bg);
+color:var(--text);
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:260px;
+background:var(--sidebar);
+padding:25px;
+display:flex;
+flex-direction:column;
+gap:12px;
+border-right:1px solid #1f2937;
+}
+
+.sidebar select,.sidebar button{
+padding:12px;
+border-radius:8px;
+border:1px solid #1f2937;
+background:#111827;
+color:white;
+}
+
+.main{
+flex:1;
+padding:30px;
+overflow:auto;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:25px;
+}
+
+.kpis{
+display:grid;
+grid-template-columns:repeat(8,1fr);
+gap:18px;
+margin-bottom:30px;
+}
+
+.kpi{
+background:var(--card);
+padding:18px;
+border-radius:12px;
+}
+
+.kpi h3{
+font-size:13px;
+color:var(--muted);
+margin:0 0 6px 0;
+}
+
+.kpi span{
+font-size:22px;
+font-weight:700;
+}
+
+.charts{
+display:grid;
+grid-template-columns:2fr 1fr;
+gap:20px;
+}
+
+.chart-box{
+background:var(--card);
+padding:18px;
+border-radius:12px;
+height:420px;
+}
+
+.chart-box.large{
+grid-column:span 2;
+height:520px;
+}
+
+canvas{
+width:100%!important;
+height:100%!important;
+}
+
+.chart-title{
+margin-bottom:10px;
+font-size:14px;
+color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h3>Filtri</h3>
+<select id="branchFilter"></select>
+<select id="monthFilter"></select>
+<button id="resetFilters">Reset</button>
+</div>
+
+<div class="main">
+
+<div class="header">
+<h1>Fleet & Revenue Dashboard</h1>
+</div>
+
+<div class="kpis">
+<div class="kpi"><h3>Flotta media</h3><span id="kpiFleet">–</span></div>
+<div class="kpi"><h3>Rental Days</h3><span id="kpiRental">–</span></div>
+<div class="kpi"><h3>Prenotazioni</h3><span id="kpiBookings">–</span></div>
+<div class="kpi"><h3>Revenue</h3><span id="kpiRevenue">–</span></div>
+<div class="kpi"><h3>Profit</h3><span id="kpiProfit">–</span></div>
+<div class="kpi"><h3>Utilization %</h3><span id="kpiUtil">–</span></div>
+<div class="kpi"><h3>Rev / Vehicle</h3><span id="kpiRevVeh">–</span></div>
+<div class="kpi"><h3>Anc / Booking</h3><span id="kpiAncBook">–</span></div>
+</div>
+
+<div class="charts">
+
+<div class="chart-box large">
+<h3 class="chart-title">Trend operativo</h3>
+<canvas id="trendChart"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Fleet Utilization</h3>
+<canvas id="utilChart"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Revenue per Branch</h3>
+<canvas id="branchChart"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Fleet vs Revenue</h3>
+<canvas id="scatterChart"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Prenotazioni mensili</h3>
+<canvas id="seasonChart"></canvas>
+</div>
+
+<div class="chart-box">
+<h3 class="chart-title">Forecast prenotazioni</h3>
+<canvas id="forecastChart"></canvas>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const euro=v=>"€ "+Math.round(v).toLocaleString("it-IT");
+
+function monthFromDate(d){
+return new Date(d).toLocaleString("it-IT",{month:"long"}).toLowerCase();
+}
+
+const MONTHS=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+
+function sortMonths(arr){
+return arr.sort((a,b)=>MONTHS.indexOf(a)-MONTHS.indexOf(b));
+}
+
+let fleetData=[], rentalData=[], bookingData=[];
+let charts={};
+
+Promise.all([
+fetch("Fleet_station2025.json").then(r=>r.json()),
+fetch("fleetStation2025.json").then(r=>r.json()),
+fetch("Clean booking 2.json").then(r=>r.json())
+]).then(([fleet,rental,booking])=>{
+
+fleetData=fleet.Data||fleet.Sheet1||fleet;
+rentalData=rental.Sheet1||rental.Data||rental;
+bookingData=booking.Bookings||booking.Data||booking;
+
+initFilters();
+update();
+
+});
+
+function initFilters(){
+
+const branches=[...new Set(fleetData.map(x=>x["Branch Office"]))];
+
+branchFilter.innerHTML='<option value="ALL">Tutte</option>'+
+branches.map(b=>`<option value="${b}">${b}</option>`).join("");
+
+const months=[...new Set(fleetData.map(x=>monthFromDate(x.Mese)))];
+sortMonths(months);
+
+monthFilter.innerHTML='<option value="ALL">Tutti</option>'+
+months.map(m=>`<option value="${m}">${m}</option>`).join("");
+
+branchFilter.onchange=update;
+monthFilter.onchange=update;
+
+}
+
+resetFilters.onclick=()=>{
+branchFilter.value="ALL";
+monthFilter.value="ALL";
+update();
+};
+
+function update(){
+
+let fleet=fleetData;
+let bookings=bookingData;
+
+if(branchFilter.value!=="ALL"){
+fleet=fleet.filter(x=>x["Branch Office"]===branchFilter.value);
+bookings=bookings.filter(x=>x["Branch office"]===branchFilter.value);
+}
+
+if(monthFilter.value!=="ALL"){
+fleet=fleet.filter(x=>monthFromDate(x.Mese)===monthFilter.value);
+bookings=bookings.filter(x=>monthFromDate(x["Check-out"])===monthFilter.value);
+}
+
+/* KPI */
+
+const fleetSum=fleet.reduce((s,x)=>s+Number(x.flotta||0),0);
+const fleetAvg=fleet.length?fleetSum/fleet.length:0;
+
+const revenue=bookings.reduce((s,x)=>s+Number(x.Revenue||0),0);
+const anc=bookings.reduce((s,x)=>s+Number(x["Ancillaries vendute"]||0),0);
+const cost=bookings.reduce((s,x)=>s+Number(x.Costi||0),0);
+
+const rentalDays=rentalData.reduce((s,x)=>s+Number(x["Rental Days"]||0),0);
+
+kpiFleet.innerText=Math.round(fleetAvg);
+kpiRental.innerText=rentalDays.toLocaleString("it-IT");
+kpiBookings.innerText=bookings.length;
+kpiRevenue.innerText=euro(revenue);
+kpiProfit.innerText=euro(revenue-cost);
+kpiRevVeh.innerText=euro(revenue/(fleetAvg||1));
+kpiAncBook.innerText=(anc/(bookings.length||1)).toFixed(2);
+
+const days=30;
+kpiUtil.innerText=((rentalDays/(fleetAvg*days))*100||0).toFixed(1)+"%";
+
+renderCharts();
+
+}
+
+function destroyCharts(){
+Object.values(charts).forEach(c=>c?.destroy());
+charts={};
+}
+
+function renderCharts(){
+
+destroyCharts();
+
+const revenue={},bookings={},fleet={},anc={},costs={};
+
+bookingData.forEach(b=>{
+const m=monthFromDate(b["Check-out"]);
+revenue[m]=(revenue[m]||0)+Number(b.Revenue||0);
+bookings[m]=(bookings[m]||0)+1;
+anc[m]=(anc[m]||0)+Number(b["Ancillaries vendute"]||0);
+costs[m]=(costs[m]||0)+Number(b.Costi||0);
+});
+
+fleetData.forEach(f=>{
+const m=monthFromDate(f.Mese);
+fleet[m]=(fleet[m]||0)+Number(f.flotta||0);
+});
+
+const months=sortMonths(Object.keys(revenue));
+
+charts.trend=new Chart(trendChart,{
+type:"line",
+data:{
+labels:months,
+datasets:[
+{label:"Revenue",data:months.map(m=>revenue[m]||0),borderColor:"#3b82f6"},
+{label:"Prenotazioni",data:months.map(m=>bookings[m]||0),borderColor:"#22c55e"},
+{label:"Flotta",data:months.map(m=>fleet[m]||0),borderColor:"#a855f7"},
+{label:"Costi",data:months.map(m=>costs[m]||0),borderColor:"#ef4444"}
+]
+},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+charts.util=new Chart(utilChart,{
+type:"line",
+data:{
+labels:months,
+datasets:[{
+label:"Utilization %",
+data:months.map(m=>(bookings[m]||0)/(fleet[m]||1)*100),
+borderColor:"#22c55e"
+}]
+},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+const branchRev={};
+
+bookingData.forEach(b=>{
+const br=b["Branch office"];
+branchRev[br]=(branchRev[br]||0)+Number(b.Revenue||0);
+});
+
+charts.branch=new Chart(branchChart,{
+type:"bar",
+data:{
+labels:Object.keys(branchRev),
+datasets:[{label:"Revenue",data:Object.values(branchRev)}]
+}
+});
+
+const fleetBranch={};
+
+fleetData.forEach(f=>{
+fleetBranch[f["Branch Office"]]=(fleetBranch[f["Branch Office"]]||0)+Number(f.flotta||0);
+});
+
+const scatter=[];
+
+Object.keys(branchRev).forEach(br=>{
+if(fleetBranch[br]) scatter.push({x:fleetBranch[br],y:branchRev[br]});
+});
+
+charts.scatter=new Chart(scatterChart,{
+type:"scatter",
+data:{datasets:[{label:"Fleet vs Revenue",data:scatter}]}
+});
+
+charts.season=new Chart(seasonChart,{
+type:"bar",
+data:{
+labels:months,
+datasets:[{label:"Prenotazioni",data:months.map(m=>bookings[m]||0)}]
+}
+});
+
+/* simple forecast */
+
+const forecast=[...months.map(m=>bookings[m]||0)];
+for(let i=0;i<2;i++){
+const avg=(forecast.slice(-3).reduce((a,b)=>a+b,0))/3;
+forecast.push(avg);
+}
+
+charts.forecast=new Chart(forecastChart,{
+type:"line",
+data:{
+labels:[...months,"forecast1","forecast2"],
+datasets:[{label:"Forecast bookings",data:forecast}]
+}
+});
+
+}
+
+</script>
+
+</body>
+</html>
